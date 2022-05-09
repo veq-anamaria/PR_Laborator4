@@ -13,12 +13,12 @@ public class Client implements Runnable {
     @Override
     public void run() {
         try {
-            Socket client = new Socket("127.0.0.1", 9999);
+            client = new Socket("127.0.0.1", 9999);
             out = new PrintWriter(client.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
-            InputHandler inputHandler= new InputHandler();
-            Thread t= new Thread(inputHandler);
+            InputHandlerClient inputHandlerClient = new InputHandlerClient();
+            Thread t= new Thread(inputHandlerClient);
             t.start();
 
             String inMessage;
@@ -28,6 +28,7 @@ public class Client implements Runnable {
             }
 
         } catch (IOException e) {
+            System.out.println(e);
             shutdown();
         }
     }
@@ -40,12 +41,12 @@ public class Client implements Runnable {
                 client.close();
             }
         } catch (IOException e){
-            //ignore
+            System.out.println(e);
         }
     }
 
 
-    public class InputHandler implements Runnable {
+    public class InputHandlerClient implements Runnable {
 
         @Override
         public void run() {
@@ -53,7 +54,8 @@ public class Client implements Runnable {
                 BufferedReader inReader = new BufferedReader(new InputStreamReader(System.in));
                 while (!done) {
                     String message = inReader.readLine();
-                    if (message.equals("/quit")) {
+                    if (message.equals("/q")) {
+                        out.println(message);
                         inReader.close();
                         shutdown();
                     } else{
@@ -61,6 +63,7 @@ public class Client implements Runnable {
                     }
                 }
             } catch (IOException e) {
+                System.out.println(e);
                 shutdown();
             }
         }

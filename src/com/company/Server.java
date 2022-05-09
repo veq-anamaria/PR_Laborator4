@@ -1,7 +1,6 @@
 package com.company;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -22,21 +21,23 @@ public class Server implements Runnable{
     @Override
     public void run(){
         try {
+            server = new ServerSocket(9999);
+            pool = Executors.newCachedThreadPool();
+
             while(!done) {
-                server = new ServerSocket(9999);
-                pool = Executors.newCachedThreadPool();
                 Socket client = server.accept();
                 ConnectionHandler handler = new ConnectionHandler(client);
                 connections.add(handler);
                 pool.execute(handler);
             }
         } catch (Exception e) {
+            e.printStackTrace();
             shutdown();
         }
     }
-    public void broadcast(String message){
+    public void broadcast(ConnectionHandler sender, String message){
         for(ConnectionHandler ch: connections){
-            if(ch!=null){
+            if(ch!=null && !ch.equals(sender)){
                 ch.sendMessage(message);
             }
         }
@@ -44,6 +45,7 @@ public class Server implements Runnable{
     public void shutdown(){
         try{
         done = true;
+        pool.shutdown();
         if(!server.isClosed()) {
             server.close();
         }
@@ -51,7 +53,7 @@ public class Server implements Runnable{
             ch.shutdown();
         }
         } catch (IOException e) {
-            // ignore
+            System.out.println(e);
         }
 
     }
@@ -67,6 +69,7 @@ public class Server implements Runnable{
             this.client= client;
 
         }
+
         @Override
         public void run() {
             try {
@@ -75,7 +78,7 @@ public class Server implements Runnable{
                 out.println("Introdu un nickname: ");
                 nume=in.readLine();
                 System.out.println(nume+" sa conectat!");
-                broadcast(nume+" a intrat in chat!");
+                broadcast(this, nume+" a intrat in chat!");
 
                 String message;
 
@@ -84,7 +87,7 @@ public class Server implements Runnable{
                         String [] messageSplit = message.split(" ", 2);
 
                         if (messageSplit.length==2){
-                            broadcast(nume+"si-a schimbat numele: "+messageSplit[1]);
+                            broadcast(this, nume+"si-a schimbat numele: "+messageSplit[1]);
                             System.out.println(nume+"si-a schimbat numele: "+messageSplit[1]);
                             nume= messageSplit[1];
                             out.println("Nickname a fost schimbat cu succes!");
@@ -94,16 +97,17 @@ public class Server implements Runnable{
                         }
 
                     } else if(message.startsWith("/quit")){
-                        broadcast(nume+" a parasit chat-ul!");
+                        broadcast(this, nume+" a parasit chat-ul!");
                         shutdown();
 
                     } else {
-                        broadcast(nume+": "+ message);
+                        broadcast(this, nume+": "+ message);
                     }
                 }
 
             } catch (IOException e) {
-                shutdown();
+                System.out.println(e.fillInStackTrace());
+                e.printStackTrace();
             }
         }
 
@@ -120,7 +124,8 @@ public class Server implements Runnable{
                     client.close();
                 }
             } catch (IOException e){
-                //ignore
+                System.out.println(e);
+                e.printStackTrace();
             }
         }
     }
